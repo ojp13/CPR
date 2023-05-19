@@ -2,36 +2,30 @@
 
 -export([new/0, write/3, delete/2, destroy/1, read/2, match/2]).
 
+-include("data.hrl").
+
 new() -> 
-    [].
+    TabId = ets:new(?MODULE, [set, named_table, {keypos, #data.key}]),
+    TabId.
 
 destroy(_DbRef) -> 
-    [].
+    ets:delete(?MODULE).
 
-write(Key, Element, []) -> 
-    [{Key, Element}];
-write(Key, Element, [{Key, _}|T]) -> 
-    [{Key, Element} | T];
-write(Key, Element, [H|T]) -> 
-    [H | write(Key, Element, T)].
+write(Key, Element, TabId) -> 
+    ets:insert(TabId, #data{key=Key, value=Element}),
+    TabId.
 
+delete(Key, TabId) ->
+    ets:delete(TabId, Key),
+    TabId.
 
-delete(_, []) -> [];
-delete(Key, [{Key, _}|T]) ->
-    T;
-delete(Key, [H|T]) ->
-    [H | delete(Key, T)].
+read(Key, TabId) ->
+    case ets:lookup(TabId, Key) of 
+        [] -> {error, instance};
+        [#data{value=Element}] -> Element
+    end.
 
-read(_, []) -> {error, instance};
-read(Key, [{Key, Value}|_]) ->
-    {ok, Value};
-read(Key, [_|T]) ->
-    read(Key, T).
-
-match(_, []) -> [];
-match(V, [{K, V} | T]) ->
-    [K | match(V, T)];
-match(V, [_|T]) ->
-    match(V, T).
+match(Value, TabId) ->
+    lists:flatten(ets:match(TabId, #data{key='$0', value=Value})).
 
         
